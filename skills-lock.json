@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "skills": {
+    "alan-adi": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/alan-adi/SKILL.md",
+      "computedHash": "44f0a34eb63878b98be500aeca3c630de0667ea1b5cc07dfbb9996c21e07e784"
+    },
+    "arac-kontrol": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/arac-kontrol/SKILL.md",
+      "computedHash": "ac9e1d50325043c3e7a07e484db20e2f58465356ef2454d57ec9dcb5187f0bb4"
+    },
+    "aws-cicd-temeli": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/aws-cicd-temeli/SKILL.md",
+      "computedHash": "4d9fa0f40141f9c37733bd0934f477ca21c3ea62c29e151bef9d621843e29ba7"
+    },
+    "aws-ec2-site": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/aws-ec2-site/SKILL.md",
+      "computedHash": "c2ba2d004df490d0b1d0e74ebb52be7cddb65b9b8724b0653f9d03bd4c2a934b"
+    },
+    "aws-hesap-guvenligi": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/aws-hesap-guvenligi/SKILL.md",
+      "computedHash": "09a4bd598f0224e1144b76b48ace20efe6863aa8dcdd4b0550a19f2efdb67da1"
+    },
+    "aws-statik-site": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/aws-statik-site/SKILL.md",
+      "computedHash": "ca95e2ccf37ab808d08e38c96f4120f8bd620052c3c89f40e53d4e73371f4d32"
+    },
+    "bulut-temizlik": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/bulut-temizlik/SKILL.md",
+      "computedHash": "1ee6ef565d9f01e078803230f289953ed236c76f55cdb6f579dc111fe62bdaf5"
+    },
+    "cloudflare-pages": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/cloudflare-pages/SKILL.md",
+      "computedHash": "8943e24f368cae371c979857f3bb21b82827fc634e29b211ec62877aa185b22d"
+    },
+    "github-cicd": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/github-cicd/SKILL.md",
+      "computedHash": "3176d3afe5857b5a754bd7178580efd6abc4ba773e092be134228de8ed993d65"
+    },
+    "iletisim-formu": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/iletisim-formu/SKILL.md",
+      "computedHash": "bbbe1d23dcdd08a5015726e3ae3acc802a2df4309fcc767730e1b5e41d69ff68"
+    },
+    "netlify-yayin": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/netlify-yayin/SKILL.md",
+      "computedHash": "da7e3132c483e153fc8687cdca44254b12c832e05cc6f3c24686ee2219477437"
+    },
+    "sifirdan-canliya": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/sifirdan-canliya/SKILL.md",
+      "computedHash": "9a1b694d83c5910c9db9deffb894a94344ea35b89d71a8bedbe22ab2c48d0d72"
+    },
+    "supabase-veritabani": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-veritabani/SKILL.md",
+      "computedHash": "48792f565d8acaad687af0943ec396daebc0313c87ab8539f8db4fcc76b845db"
+    },
+    "turkiye-ucretsiz": {
+      "source": "furkandogmus/sifirdan-canliya",
+      "sourceType": "github",
+      "skillPath": "skills/turkiye-ucretsiz/SKILL.md",
+      "computedHash": "aae6b3cd188ef970ba7aa0b29639ad0b4e670165cf96499dbd848c2e4ee464ec"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+name: worker
+
+on:
+  pull_request:
+    paths: ["worker/**", ".github/workflows/worker.yml"]
+  push:
+    branches: [main]
+    paths: ["worker/**", ".github/workflows/worker.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+
+defaults:
+  run:
+    shell: bash
+    working-directory: worker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ayarları kontrol et
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "::error::CLOUDFLARE_API_TOKEN secret'ı yok: gh secret set CLOUDFLARE_API_TOKEN"; exit 1; }
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || { echo "::error::CLOUDFLARE_ACCOUNT_ID değişkeni yok: gh variable set CLOUDFLARE_ACCOUNT_ID --body <id>"; exit 1; }
+
+      - name: Kontrol (PR)
+        if: github.event_name == 'pull_request'
+        run: npx -y wrangler@4 deploy --dry-run --outdir dist
+
+      - name: Yayınla
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: npx -y wrangler@4 deploy

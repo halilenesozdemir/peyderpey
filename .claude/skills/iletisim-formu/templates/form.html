@@ -1,0 +1,31 @@
+<!-- Turnstile site anahtarı gizli değildir; Worker adresi wrangler deploy çıktısında. -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+<form id="iletisim" action="https://iletisim-formu.<hesap>.workers.dev" method="POST">
+  <label>Adın <input name="isim" required maxlength="60" /></label>
+  <label>E-posta (cevap için, isteğe bağlı) <input name="eposta" type="email" maxlength="120" /></label>
+  <label>Mesajın <textarea name="mesaj" required rows="6" maxlength="2000"></textarea></label>
+  <div class="cf-turnstile" data-sitekey="<turnstile-site-anahtari>" data-language="tr"></div>
+  <button type="submit">Gönder</button>
+  <p id="iletisim-durum" role="status"></p>
+</form>
+
+<script>
+  const form = document.getElementById("iletisim");
+  const durum = document.getElementById("iletisim-durum");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    durum.textContent = "Gönderiliyor…";
+    try {
+      const yanit = await fetch(form.action, { method: "POST", body: new FormData(form) });
+      const veri = await yanit.json();
+      if (!yanit.ok) throw new Error(veri.hata || "Gönderilemedi");
+      form.reset();
+      durum.textContent = "Teşekkürler, mesajın ulaştı.";
+    } catch (hata) {
+      durum.textContent = hata.message;
+    } finally {
+      if (window.turnstile) turnstile.reset();
+    }
+  });
+</script>

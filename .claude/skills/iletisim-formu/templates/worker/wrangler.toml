@@ -1,0 +1,11 @@
+name = "iletisim-formu"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Formun gönderilebileceği adresler, virgülle.
+ALLOWED_ORIGINS = "https://alanadi.com,https://www.alanadi.com,http://localhost:4321"
+# Resend'de doğrulanmış domain'den bir adres.
+MAIL_FROM = "Site <form@send.alanadi.com>"
+# Mesajların gideceği kutu.
+MAIL_TO = "sen@ornek.com"

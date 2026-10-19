@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>peyderpey</title>
+  <meta name="description" content="Adım adım odaklan. Her pomodoro bir pey.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='20' width='7' height='8' rx='2' fill='%23d9643a'/><rect x='12.5' y='13' width='7' height='15' rx='2' fill='%23d9643a'/><rect x='21' y='6' width='7' height='22' rx='2' fill='%23d9643a'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="brand">
+      <span class="logo">pey<span>der</span>pey</span>
+      <span class="tagline">adım adım odaklan</span>
+    </header>
+
+    <nav class="modes" role="tablist" aria-label="Mod">
+      <button class="mode" role="tab" data-mode="focus">Odak</button>
+      <button class="mode" role="tab" data-mode="short">Kısa mola</button>
+      <button class="mode" role="tab" data-mode="long">Uzun mola</button>
+    </nav>
+
+    <section class="timer" aria-live="polite">
+      <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="ring-track" cx="110" cy="110" r="100"></circle>
+        <circle class="ring-fill" cx="110" cy="110" r="100"></circle>
+      </svg>
+      <div class="time" id="time">25:00</div>
+      <div class="label" id="label">1. pey</div>
+    </section>
+
+    <div class="controls">
+      <button class="btn ghost" id="reset" aria-label="Sıfırla">Sıfırla</button>
+      <button class="btn primary" id="toggle">Başla</button>
+      <button class="btn ghost" id="skip" aria-label="Atla">Atla</button>
+    </div>
+
+    <section class="stairs" aria-label="Merdiven">
+      <div class="steps" id="steps"></div>
+      <p class="stats" id="stats">Bugün 0 pey</p>
+    </section>
+
+    <footer class="hint">Boşluk: başlat / duraklat</footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

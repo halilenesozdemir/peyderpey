@@ -1,0 +1,11 @@
+.env
+.env.*
+node_modules/
+.netlify/
+.terraform/
+*.tfstate*
+*.tfvars
+tfplan
+.playwright-mcp/
+.wrangler/
+.DS_Store

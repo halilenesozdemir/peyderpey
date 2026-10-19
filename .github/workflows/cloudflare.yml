@@ -1,0 +1,74 @@
+name: cloudflare
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+  CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT }}
+  # Yayınlanacak klasör. Build varsa çıktısı (Astro/Vite: dist).
+  PUBLISH_DIR: site
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ayarları kontrol et
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "::error::CLOUDFLARE_API_TOKEN secret'ı yok: gh secret set CLOUDFLARE_API_TOKEN"; exit 1; }
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || { echo "::error::CLOUDFLARE_ACCOUNT_ID değişkeni yok: gh variable set CLOUDFLARE_ACCOUNT_ID --body <id>"; exit 1; }
+          [ -n "$CF_PAGES_PROJECT" ] || { echo "::error::CF_PAGES_PROJECT değişkeni yok: gh variable set CF_PAGES_PROJECT --body <proje>"; exit 1; }
+
+      - name: Build (package.json varsa)
+        run: if [ -f package.json ]; then npm ci && npm run build; fi
+
+      - name: Önizleme (PR)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          npx -y wrangler@4 pages deploy "$PUBLISH_DIR" --project-name "$CF_PAGES_PROJECT" \
+            --branch "pr-$PR" --commit-hash "${{ github.event.pull_request.head.sha }}" | tee deploy.log
+          URL=$(grep -o 'https://[^ ]*\.pages\.dev' deploy.log | tail -1)
+          [ -n "$URL" ] || { echo "::error::Cloudflare önizleme URL'i dönmedi"; exit 1; }
+          # Kendi işaretli yorumunu günceller; diğer workflow'ların yorumlarına dokunmaz.
+          BODY=$(printf '<!-- cloudflare-preview -->\nCloudflare Pages önizleme: %s' "$URL")
+          ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.body | startswith("<!-- cloudflare-preview -->")) | .id' | tail -1)
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$ID" -f body="$BODY" > /dev/null
+          else
+            gh pr comment "$PR" --body "$BODY"
+          fi
+
+      - name: Production
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          npx -y wrangler@4 pages deploy "$PUBLISH_DIR" --project-name "$CF_PAGES_PROJECT" \
+            --branch main --commit-hash "$GITHUB_SHA" | tee deploy.log
+          URL=$(grep -o 'https://[^ ]*\.pages\.dev' deploy.log | tail -1)
+          [ -n "$URL" ] || { echo "::error::Cloudflare deploy URL'i dönmedi"; exit 1; }
+          echo "### Yayında: $URL (kalıcı adres: wrangler pages project list)" >> "$GITHUB_STEP_SUMMARY"

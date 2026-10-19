@@ -1,0 +1,170 @@
+name: aws-ec2
+
+on:
+  pull_request:
+    paths-ignore:
+      - "*.md"
+      - "infra/bootstrap/**"
+      - "infra/s3-site/**"
+      - ".github/workflows/aws-s3.yml"
+      - ".github/workflows/netlify.yml"
+      - ".github/workflows/supabase.yml"
+      - "supabase/**"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "infra/bootstrap/**"
+      - "infra/s3-site/**"
+      - ".github/workflows/aws-s3.yml"
+      - ".github/workflows/netlify.yml"
+      - ".github/workflows/supabase.yml"
+      - "supabase/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: aws-ec2-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  TF_VAR_project: ${{ vars.PROJECT }}
+  TF_IN_AUTOMATION: "true"
+  # Yayınlanacak klasör. Build varsa çıktısı (Astro/Vite: dist).
+  PUBLISH_DIR: site
+
+defaults:
+  run:
+    shell: bash
+    working-directory: infra/ec2-site
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - run: terraform fmt -check -recursive
+
+      - run: terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" -backend-config="region=eu-central-1"
+
+      - run: terraform validate
+
+      # Plan rolü salt okunur, kilit dosyası yazamaz; kilidi sadece apply alır.
+      - run: terraform plan -input=false -no-color -lock=false | tee plan.txt
+
+      - name: Planı PR'a yaz
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "<!-- aws-ec2-plan -->"
+            echo "#### Terraform plan: EC2 + CloudFront"
+            grep -E '^(Plan:|No changes)' plan.txt || true
+            echo
+            echo "<details><summary>Ayrıntı</summary>"
+            echo
+            echo '```'
+            tail -c 60000 plan.txt
+            echo '```'
+            echo "</details>"
+          } > comment.md
+          # Kendi işaretli yorumunu günceller; diğer workflow'ların yorumlarına dokunmaz.
+          PR=${{ github.event.pull_request.number }}
+          ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.body | startswith("<!-- aws-ec2-plan -->")) | .id' | tail -1)
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$ID" -F body=@comment.md > /dev/null
+          else
+            gh pr comment "$PR" --body-file comment.md
+          fi
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build (package.json varsa)
+        working-directory: ${{ github.workspace }}
+        run: if [ -f package.json ]; then npm ci && npm run build; fi
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - run: terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" -backend-config="region=eu-central-1"
+
+      - run: terraform apply -input=false -auto-approve
+
+
+      - name: İçeriği yükle ve instance'a dağıt
+        run: |
+          BUCKET=$(terraform output -raw bucket)
+          IID=$(terraform output -raw instance_id)
+          DIST=$(terraform output -raw distribution_id)
+
+          aws s3 sync "$GITHUB_WORKSPACE/$PUBLISH_DIR/" "s3://$BUCKET" --delete
+
+          # Yeni instance'ın SSM'e kaydolması bir iki dakika sürer.
+          for _ in $(seq 60); do
+            PING=$(aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$IID" \
+              --query 'InstanceInformationList[0].PingStatus' --output text)
+            [ "$PING" = "Online" ] && break
+            sleep 10
+          done
+          [ "$PING" = "Online" ] || { echo "Instance SSM'de görünmedi: $IID"; exit 1; }
+
+          # cloud-init beklenir: nginx paketi sonradan kurulursa varsayılan index.html bizimkinin üstüne yazar.
+          # nginx paketinin bozuk sembolik bağları (poweredby.png) sync'i 2 koduyla düşürür; önce silinir.
+          PARAMS=$(jq -nc --arg b "$BUCKET" '{commands: [
+            "cloud-init status --wait > /dev/null || true",
+            "find /usr/share/nginx/html -xtype l -delete",
+            "aws s3 sync s3://\($b)/ /usr/share/nginx/html/ --delete --only-show-errors"
+          ]}')
+          CMD_ID=$(aws ssm send-command --instance-ids "$IID" --document-name AWS-RunShellScript \
+            --comment "deploy ${GITHUB_SHA::7}" --parameters "$PARAMS" \
+            --query Command.CommandId --output text)
+
+          for _ in $(seq 60); do
+            ST=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$IID" \
+              --query Status --output text 2>/dev/null || echo Pending)
+            case "$ST" in
+              Success) break ;;
+              Pending|InProgress|Delayed) sleep 10 ;;
+              *)
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$IID" \
+                  --query StandardErrorContent --output text
+                exit 1 ;;
+            esac
+          done
+          [ "$ST" = "Success" ] || { echo "SSM komutu zaman aşımı: $CMD_ID"; exit 1; }
+
+          aws cloudfront create-invalidation --distribution-id "$DIST" --paths "/*" > /dev/null
+          echo "### Yayında: $(terraform output -raw url)" >> "$GITHUB_STEP_SUMMARY"
